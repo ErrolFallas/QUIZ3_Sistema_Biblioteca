@@ -54,18 +54,14 @@ FOREIGN KEY (ID_Usuario) REFERENCES Usuarios(ID_Usuario)
 
 CREATE TABLE Detalle_Prestamo (
 ID_Detalle_Prestamo INT AUTO_INCREMENT PRIMARY KEY,
-Fecha_Devolucion DATE DEFAULT(CURRENT_DATE),
+Fecha_Estimada_Devolucion DATE NOT NULL,
+Estado ENUM ("Devuelto", "No_devuelto") default "No_devuelto",
 ID_Prestamo INT,
 ID_Libro INT,
 FOREIGN KEY (ID_Prestamo) REFERENCES Prestamos(ID_Prestamo),
 FOREIGN KEY (ID_Libro) REFERENCES Libros(ID_Libro)
 ); 
 
-ALTER TABLE Detalle_Prestamo
-MODIFY COLUMN Fecha_Devolucion DATE NOT NULL;
-
-ALTER TABLE Detalle_Prestamo
-ADD COLUMN Estado ENUM ("Devuelto", "No_devuelto") default "No_devuelto";
 
 -- consultas de tablas , para observar propiedades
 select * From Autores;
@@ -156,7 +152,7 @@ INSERT INTO Libro_Categoria (ID_Categoria, ID_Libro) VALUES
 (2,5),
 (4,6);
 
-INSERT INTO Detalle_Prestamo (Fecha_Devolucion, ID_Prestamo, ID_Libro, Estado) VALUES
+INSERT INTO Detalle_Prestamo (Fecha_Estimada_Devolucion, ID_Prestamo, ID_Libro, Estado) VALUES
 ("2023-01-20", 1, 1, "Devuelto"),
 ("2023-05-25", 2, 2, "Devuelto"),
 ("2024-03-05", 3, 3, "Devuelto"),
@@ -165,7 +161,7 @@ INSERT INTO Detalle_Prestamo (Fecha_Devolucion, ID_Prestamo, ID_Libro, Estado) V
 ("2026-02-10", 6, 6, DEFAULT),
 ("2026-01-10", 7, 7, DEFAULT);
 
-INSERT INTO Detalle_Prestamo (Fecha_Devolucion, ID_Prestamo, ID_Libro, Estado) VALUES
+INSERT INTO Detalle_Prestamo (Fecha_Estimada_Devolucion, ID_Prestamo, ID_Libro, Estado) VALUES
 ("2026-02-10", 8, 1, "Devuelto"),
 ("2026-02-12", 8, 2, "Devuelto"),
 ("2026-02-18", 9, 1, "Devuelto"),
@@ -214,14 +210,14 @@ INNER JOIN Prestamos ON Detalle_Prestamo.ID_Prestamo = Prestamos.ID_Prestamo
 INNER JOIN Libros ON Detalle_Prestamo.ID_Libro = Libros.ID_Libro
 INNER JOIN Usuarios ON Prestamos.ID_Usuario = Usuarios.ID_Usuario;
 -- C.2-Mostrar libros no devueltos
-SELECT Libros.Titulo, Prestamos.Fecha_Prestamo AS Fecha_Prestamo, Detalle_Prestamo.Fecha_Devolucion AS Fecha_Estimada_Devolucion,Detalle_Prestamo.Estado
+SELECT Libros.Titulo, Prestamos.Fecha_Prestamo AS Fecha_Prestamo, Detalle_Prestamo.Fecha_Estimada_Devolucion AS Fecha_Limite_Devolucion,Detalle_Prestamo.Estado
 FROM Detalle_Prestamo 
 INNER JOIN Prestamos ON Detalle_Prestamo.ID_Prestamo= Prestamos.ID_Prestamo
 INNER JOIN Libros ON Detalle_Prestamo.ID_Libro = Libros.ID_Libro
 where Detalle_Prestamo.Estado = "No_devuelto";
 
 -- C.3-Mostrar historial completo de préstamos
-SELECT Detalle_Prestamo.ID_Detalle_Prestamo, Libros.Titulo, Usuarios.Nombre as Nombre_Usuario, Usuarios.Apellido as Apellido_Usuario, Prestamos.Fecha_Prestamo AS Fecha_Prestamo, Detalle_Prestamo.Fecha_Devolucion AS Fecha_Estimada_Devolucion,Detalle_Prestamo.Estado
+SELECT Detalle_Prestamo.ID_Detalle_Prestamo, Libros.Titulo, Usuarios.Nombre as Nombre_Usuario, Usuarios.Apellido as Apellido_Usuario, Prestamos.Fecha_Prestamo AS Fecha_Prestamo, Detalle_Prestamo.Fecha_Estimada_Devolucion AS Fecha_Limite_Devolucion,Detalle_Prestamo.Estado
 FROM Detalle_Prestamo 
 INNER JOIN Prestamos ON Detalle_Prestamo.ID_Prestamo= Prestamos.ID_Prestamo
 INNER JOIN Libros ON Detalle_Prestamo.ID_Libro = Libros.ID_Libro
@@ -230,34 +226,34 @@ INNER JOIN Usuarios ON Prestamos.ID_Usuario = Usuarios.ID_Usuario;
 
 -- D-Agregaciones:
 -- D.1-Cantidad de libros por categoría
-SELECT Categorias.Nombre AS Categoria, COUNT(Libro_Categoria.ID_Libro) AS Cantidad_Libros
+SELECT Categorias.ID_Categoria, Categorias.Nombre AS Categoria, COUNT(Libro_Categoria.ID_Libro) AS Cantidad_Libros
 FROM Libro_Categoria
 INNER JOIN Categorias 
 ON Libro_Categoria.ID_Categoria = Categorias.ID_Categoria
-GROUP BY Categorias.Nombre;
+GROUP BY Categorias.ID_Categoria;
 
 -- D.2-Cantidad de préstamos por usuario
-Select Usuarios.Nombre AS Usuarios, count(Prestamos.ID_Prestamo) AS Cantidad_Prestamos_Realizados
+Select Usuarios.ID_Usuario, Usuarios.Nombre AS Usuarios, count(Prestamos.ID_Prestamo) AS Cantidad_Prestamos_Realizados
 FROM Prestamos
 INNER JOIN Usuarios
 ON Prestamos.ID_Usuario=Usuarios.ID_Usuario
-Group by Usuarios.Nombre;
+Group by Usuarios.ID_Usuario;
 
 -- D.3-Cantidad de libros por editorial
 select Editoriales.Nombre AS Casa_Editorial, count(Libros.ID_Libro) AS Cantidad_libros
 FROM Libros
 INNER JOIN Editoriales
 ON Libros.ID_Editorial= Editoriales.ID_Editorial
-GROUP BY Editoriales.Nombre;
+GROUP BY Editoriales.ID_Editorial;
 
 -- E-Consultas avanzadas
 
 -- E.1-Usuario con más préstamos
-select Usuarios.Nombre as usuario, count(Prestamos.ID_usuario) as Cantidad_Prestamos
+select Usuarios.ID_Usuario, Usuarios.Nombre as usuario, count(Prestamos.ID_usuario) as Cantidad_Prestamos
 FROM Prestamos
 Inner JOIN Usuarios
 ON Prestamos.ID_Usuario = Usuarios.ID_Usuario
-Group by Usuarios.Nombre
+Group by Usuarios.ID_Usuario
 HAVING COUNT(Prestamos.ID_usuario) = (
     SELECT MAX(Cantidad)
     FROM (
@@ -269,13 +265,12 @@ HAVING COUNT(Prestamos.ID_usuario) = (
 
 
 -- E.2-Libro más prestado
-
 SELECT Libros.Titulo, count(Detalle_Prestamo.ID_Prestamo ) as Cantidad_Prestamos FROM Detalle_Prestamo 
 INNER JOIN Libros
 ON Detalle_Prestamo.ID_Libro=Libros.ID_Libro
 INNER JOIN Prestamos
 ON Detalle_Prestamo.ID_Prestamo=Prestamos.ID_Prestamo
-Group by Libros.Titulo
+Group by Libros.ID_Libro
 HAVING COUNT(Detalle_Prestamo.ID_Prestamo) = (
     SELECT MAX(Cantidad)
     FROM (
@@ -286,21 +281,21 @@ HAVING COUNT(Detalle_Prestamo.ID_Prestamo) = (
 );
 
 -- E.3-Categoría más popular
-SELECT Categorias.Nombre AS Categoria, COUNT(Detalle_Prestamo.ID_Prestamo) AS Total_Prestamos
+SELECT Categorias.ID_Categoria, Categorias.Nombre AS Categoria, COUNT(Detalle_Prestamo.ID_Prestamo) AS Total_Prestamos
 FROM Categorias
 INNER JOIN Libro_Categoria 
 ON Categorias.ID_Categoria = Libro_Categoria.ID_Categoria
 INNER JOIN Detalle_Prestamo 
 ON Libro_Categoria.ID_Libro = Detalle_Prestamo.ID_Libro
-GROUP BY Categorias.Nombre
+GROUP BY Categorias.ID_Categoria
 HAVING COUNT(Detalle_Prestamo.ID_Prestamo) = (
     SELECT MAX(Cantidad)
     FROM (
         SELECT COUNT(*) AS Cantidad
-        FROM Libro_Categoria LC
-        INNER JOIN Detalle_Prestamo DP 
-		ON LC.ID_Libro = DP.ID_Libro
-        GROUP BY LC.ID_Categoria
+        FROM Detalle_Prestamo
+        INNER JOIN Libro_Categoria 
+		ON Detalle_Prestamo.ID_Libro = Libro_Categoria.ID_Libro
+        GROUP BY Libro_Categoria.ID_Categoria
     ) AS sub
 );
 
