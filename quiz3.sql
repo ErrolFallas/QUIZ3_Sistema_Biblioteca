@@ -54,8 +54,7 @@ FOREIGN KEY (ID_Usuario) REFERENCES Usuarios(ID_Usuario)
 
 CREATE TABLE Detalle_Prestamo (
 ID_Detalle_Prestamo INT AUTO_INCREMENT PRIMARY KEY,
-Fecha_Estimada_Devolucion DATE NOT NULL,
-Estado ENUM ("Devuelto", "No_devuelto") default "No_devuelto",
+Fecha_Devolucion DATE DEFAULT(CURRENT_DATE),
 ID_Prestamo INT,
 ID_Libro INT,
 FOREIGN KEY (ID_Prestamo) REFERENCES Prestamos(ID_Prestamo),
@@ -249,12 +248,12 @@ GROUP BY Editoriales.ID_Editorial;
 -- E-Consultas avanzadas
 
 -- E.1-Usuario con más préstamos
-select Usuarios.ID_Usuario, Usuarios.Nombre as usuario, count(Prestamos.ID_Prestamo) as Cantidad_Prestamos
+select Usuarios.Nombre as usuario, count(Prestamos.ID_usuario) as Cantidad_Prestamos
 FROM Prestamos
 Inner JOIN Usuarios
 ON Prestamos.ID_Usuario = Usuarios.ID_Usuario
-Group by Usuarios.ID_Usuario
-HAVING COUNT(Prestamos.ID_Prestamo) = (
+Group by Usuarios.Nombre
+HAVING COUNT(Prestamos.ID_usuario) = (
     SELECT MAX(Cantidad)
     FROM (
         SELECT COUNT(*) AS Cantidad
